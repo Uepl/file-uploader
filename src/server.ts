@@ -2,11 +2,19 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
+import { Storage } from '@google-cloud/storage';
 import { fileURLToPath } from 'url';
 import crypto from 'node:crypto';
+import multer from 'multer';
+import { db } from './firebase';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Initialize Google Cloud Storage
+const storage = new Storage(); // Looks for GOOGLE_APPLICATION_CREDENTIALS
+const bucketName = process.env.GCS_BUCKET_NAME || 'your-bucket-name';
+const bucket = storage.bucket(bucketName);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +28,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '../dist')));
 
 // --- RSA Key Management ---
+// WARNING: Generating keys on startup means if the server restarts, 
+// the Private Key changes, and previous uploads CANNOT be decrypted.
+// For production, load these keys from a secure file or environment variable.
 let publicKeyPem: string;
 let privateKeyPem: string;
 
@@ -38,7 +49,7 @@ const generateKeys = () => {
 
   publicKeyPem = publicKey;
   privateKeyPem = privateKey;
-  console.log('RSA Key Pair Generated');
+  console.log('RSA Key Pair Generated (Warning: Ephemeral Keys)');
 };
 
 // Generate keys on startup
@@ -57,45 +68,69 @@ app.get('/api/public-key', (req, res) => {
 });
 
 // Upload Endpoint
-app.post('/api/upload', (req, res) => {
-  // In a real scenario, we would stream this to disk or S3
-  // For this demo, we'll just log the receipt and size
-  try {
-    const { encryptedFile, encryptedKey, iv, originalName } = req.body;
+const upload = multer({ storage: multer.memoryStorage() }); // Keep memory storage for buffering small chunks if needed, or stream directly
 
-    if (!encryptedFile || !encryptedKey || !iv) {
-      return res.status(400).json({ error: 'Missing required fields' });
+
+
+app.post('/api/upload', upload.fields([
+  { name: 'encryptedFile', maxCount: 1 },
+  { name: 'encryptedKey', maxCount: 1 },
+  { name: 'iv', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const { originalName } = req.body;
+
+    // Access files from req.files
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+    if (!files || !files['encryptedFile']?.[0] || !files['encryptedKey']?.[0] || !files['iv']?.[0]) {
+      res.status(400).json({ error: 'Missing required files' });
+      return;
     }
 
-    // --- SECURITY CRITICAL ---
-    // The server NEVER decrypts the file. It only stores the encrypted blobs.
-    // We can demonstrate that we HAVE the key, but we shouldn't use it to decrypt the file content here
-    // to allow for "Zero Knowledge" storage.
-    // However, to prove the hybrid scheme works, we *could* decrypt the AES key using our Private Key,
-    // but we will NOT decrypt the file content.
+    const encryptedFileBuffer = files['encryptedFile'][0].buffer;
+    const encryptedKeyBuffer = files['encryptedKey'][0].buffer;
+    const ivBuffer = files['iv'][0].buffer;
 
-    // 1. Decrypt the AES Key using Server's Private Key
-    const aesKeyBuffer = crypto.privateDecrypt(
-      {
-        key: privateKeyPem,
-        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-        oaepHash: 'sha256',
-      },
-      Buffer.from(encryptedKey, 'base64')
-    );
+    // 1. Upload to Google Cloud Storage
+    const timestamp = Date.now();
+    const destination = `uploads/${timestamp}_${originalName}`;
+    const file = bucket.file(destination);
 
-    console.log('--- File Upload Received ---');
-    console.log(`Original Name: ${originalName}`);
-    console.log(`Encrypted File Size: ${encryptedFile.length} bytes (Base64)`);
-    console.log(`Encrypted AES Key: ${encryptedKey.substring(0, 20)}...`);
-    console.log(`Decrypted AES Key (Server Eyes Only): ${aesKeyBuffer.toString('hex')}`);
-    console.log('----------------------------');
+    await file.save(encryptedFileBuffer, {
+      contentType: 'application/octet-stream',
+      resumable: false // Simple upload for now
+    });
 
-    res.json({ status: 'success', message: 'File uploaded securely' });
+    const storagePath = `gs://${bucket.name}/${destination}`;
+
+    // 2. Save Metadata to Firestore
+    // Store the encrypted key and IV as base64 strings or Blobs in Firestore
+    const metadata = {
+      originalName,
+      storagePath, // gs://bucket-name/path/to/file
+      storageType: 'gcs',
+      uploadDate: new Date(),
+      encryptedKey: encryptedKeyBuffer.toString('base64'),
+      iv: ivBuffer.toString('base64'),
+      size: encryptedFileBuffer.length,
+      contentType: 'application/octet-stream'
+    };
+
+    const docRef = await db.collection('files').add(metadata);
+
+    console.log(`File uploaded to GCS: ${storagePath}`);
+    console.log(`Metadata saved to Firestore: ${docRef.id}`);
+
+    res.json({
+      status: 'success',
+      message: 'File uploaded securely to Google Cloud Storage',
+      fileId: docRef.id
+    });
 
   } catch (error) {
     console.error('Upload failed:', error);
-    res.status(500).json({ error: 'Upload processing failed' });
+    res.status(500).json({ error: 'Processing failed' });
   }
 });
 

@@ -28,7 +28,7 @@ const uploadFile = async () => {
     const publicKeyRes = await fetch('/api/public-key');
     if (!publicKeyRes.ok) throw new Error('Failed to fetch public key');
     const { publicKey: publicKeyPem } = await publicKeyRes.json();
-    
+
     // 2. Import Public Key
     const rsaPublicKey = await KeyUtils.importPublicKey(publicKeyPem);
 
@@ -45,40 +45,30 @@ const uploadFile = async () => {
     const encryptedKeyBuffer = await CryptoService.wrapAesKeyWithRsa(aesKey, rsaPublicKey);
 
     // 6. Prepare Payload
-    statusMessage.value = 'Uploading...';
-    
-    // Convert buffers to Base64 for JSON transport
-    const encryptedFileBase64 = KeyUtils.arrayBufferToBase64(encryptedFileBuffer);
-    const encryptedKeyBase64 = KeyUtils.arrayBufferToBase64(encryptedKeyBuffer);
-    const ivBase64 = KeyUtils.arrayBufferToBase64(iv); // iv is Uint8Array, but arrayBufferBase64 handles it? wait.
-    // Update KeyUtils to handle Uint8Array if needed, or just pass buffer.
-    // Uint8Array.buffer property gives the ArrayBuffer.
-    const ivBase64Fixed = KeyUtils.arrayBufferToBase64(iv.buffer);
+    const formData = new FormData();
+    formData.append('originalName', file.value.name);
 
-    const payload = {
-        originalName: file.value.name,
-        encryptedFile: encryptedFileBase64,
-        encryptedKey: encryptedKeyBase64,
-        iv: ivBase64Fixed
-    };
+    // Wrap buffers in Blobs to send as "files"
+    formData.append('encryptedFile', new Blob([encryptedFileBuffer]));
+    formData.append('encryptedKey', new Blob([encryptedKeyBuffer]));
+    formData.append('iv', new Blob([iv.buffer as ArrayBuffer]));
 
     // 7. Upload
     const response = await fetch('/api/upload', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
+      method: 'POST',
+      // Note: Do NOT set 'Content-Type' header manually when using FormData
+      // The browser will set it to 'multipart/form-data' with the correct boundary
+      body: formData
     });
 
     if (!response.ok) {
-        throw new Error('Upload failed on server');
+      throw new Error('Upload failed on server');
     }
 
     const result = await response.json();
     statusMessage.value = `Success! ${result.message}`;
     uploadProgress.value = 100;
-    
+
     // Clear sensitive data (best effort in JS)
     file.value = null;
 
@@ -94,7 +84,7 @@ const uploadFile = async () => {
 <template>
   <div class="uploader">
     <h2>Secure File Upload</h2>
-    
+
     <div class="drop-zone">
       <input type="file" @change="handleFileChange" :disabled="isEncrypting" />
       <p v-if="!file">Drag & drop or click to select a file</p>
@@ -106,7 +96,7 @@ const uploadFile = async () => {
     </button>
 
     <div v-if="statusMessage" class="status">
-        <p>{{ statusMessage }}</p>
+      <p>{{ statusMessage }}</p>
     </div>
   </div>
 </template>
@@ -140,8 +130,8 @@ const uploadFile = async () => {
 }
 
 .status {
-    margin-top: 1rem;
-    font-weight: bold;
-    color: #4caf50;
+  margin-top: 1rem;
+  font-weight: bold;
+  color: #4caf50;
 }
 </style>
