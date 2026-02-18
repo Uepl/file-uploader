@@ -3,9 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import crypto from 'node:crypto';
 import multer from 'multer';
-import { db, storage } from './firebase.js';
+import { db, storage } from './config/firebase.js';
+import { generateKeys, getPublicKey } from './utils/keyManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,58 +24,6 @@ app.use(express.json());
 // Serve static files from the 'dist' directory (after build)
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// --- RSA Key Management ---
-// WARNING: Generating keys on startup means if the server restarts, 
-// the Private Key changes, and previous uploads CANNOT be decrypted.
-// For production, load these keys from a secure file or environment variable.
-let publicKeyPem: string;
-let privateKeyPem: string;
-
-
-const rawKey = process.env.PRIVATE_KEY || '';
-
-const formattedKey = rawKey
-  .replace(/\\n/g, '\n')      // Convert literal \n to actual newlines
-  .replace(/"/g, '')          // Remove any accidental wrapping quotes
-  .trim();
-
-
-const generateKeys = () => {
-  if (formattedKey) {
-    try {
-      privateKeyPem = formattedKey;
-      const publicKeyObject = crypto.createPublicKey(privateKeyPem);
-      publicKeyPem = publicKeyObject.export({
-        type: 'spki',
-        format: 'pem'
-      }) as string;
-
-      console.log('✅ Success: RSA Key pair ready.');
-    } catch (error) {
-      console.error('❌ Critical Error: The PRIVATE_KEY in .env is invalid!');
-      console.error('Reason:', error);
-      // Optional: process.exit(1); 
-    }
-  } else {
-    const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: {
-        type: 'spki',
-        format: 'pem'
-      },
-      privateKeyEncoding: {
-        type: 'pkcs8',
-        format: 'pem'
-      }
-    });
-
-    publicKeyPem = publicKey;
-    privateKeyPem = privateKey;
-    console.log('RSA Key Pair Generated (Warning: Ephemeral Keys)');
-  }
-
-};
-
 // Generate keys on startup
 generateKeys();
 
@@ -85,16 +33,15 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/public-key', (req, res) => {
-  if (!publicKeyPem) {
+  const key = getPublicKey();
+  if (!key) {
     return res.status(503).json({ error: 'Keys not yet generated' });
   }
-  res.json({ publicKey: publicKeyPem });
+  res.json({ publicKey: key });
 });
 
 // Upload Endpoint
 const upload = multer({ storage: multer.memoryStorage() }); // Keep memory storage for buffering small chunks if needed, or stream directly
-
-
 
 app.post('/api/upload', upload.fields([
   { name: 'encryptedFile', maxCount: 1 },
@@ -158,13 +105,7 @@ app.post('/api/upload', upload.fields([
   }
 });
 
-// Fallback to index.html for SPA routing
-console.log('__dirname:', __dirname);
-/*
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-*/
+
 const PORT = Number(process.env.PORT) || 3000;
 
 app.listen(PORT, '0.0.0.0', () => {
