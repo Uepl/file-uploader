@@ -5,12 +5,8 @@ services:
     build: .
     ports:
       - "3000:3000"
-    environment:
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY} # Passed from a .env file
-      - PORT=3000
-      - STORAGE_PATH=/app/storage
-    volumes:
-      - ./encrypted_storage:/app/storage # Where the files live
+    env_file:
+      - .env
     restart: always
 
   # Reverse Proxy (Shows you know networking!)
@@ -20,5 +16,6 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./dist:/usr/share/nginx/html:ro
     depends_on:
       - api

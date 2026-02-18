@@ -2,17 +2,15 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
-import { Storage } from '@google-cloud/storage';
 import { fileURLToPath } from 'url';
 import crypto from 'node:crypto';
 import multer from 'multer';
-import { db } from './firebase';
+import { db, storage } from './firebase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize Google Cloud Storage
-const storage = new Storage(); // Looks for GOOGLE_APPLICATION_CREDENTIALS
+
 const bucketName = process.env.GCS_BUCKET_NAME || 'your-bucket-name';
 const bucket = storage.bucket(bucketName);
 
@@ -34,14 +32,19 @@ app.use(express.static(path.join(__dirname, '../dist')));
 let publicKeyPem: string;
 let privateKeyPem: string;
 
-const generateKeys = () => {
-  if (process.env.PRIVATE_KEY) {
-    try {
-      // Trim() removes any accidental spaces/newlines at the very start or end
-      const rawKey = process.env.PRIVATE_KEY.trim();
-      privateKeyPem = rawKey.replace(/\\n/g, '\n');
 
-      // Derive public key
+const rawKey = process.env.PRIVATE_KEY || '';
+
+const formattedKey = rawKey
+  .replace(/\\n/g, '\n')      // Convert literal \n to actual newlines
+  .replace(/"/g, '')          // Remove any accidental wrapping quotes
+  .trim();
+
+
+const generateKeys = () => {
+  if (formattedKey) {
+    try {
+      privateKeyPem = formattedKey;
       const publicKeyObject = crypto.createPublicKey(privateKeyPem);
       publicKeyPem = publicKeyObject.export({
         type: 'spki',
@@ -51,7 +54,7 @@ const generateKeys = () => {
       console.log('✅ Success: RSA Key pair ready.');
     } catch (error) {
       console.error('❌ Critical Error: The PRIVATE_KEY in .env is invalid!');
-      console.error('Reason:', error.message);
+      console.error('Reason:', error);
       // Optional: process.exit(1); 
     }
   } else {

@@ -2,10 +2,12 @@
   "name": "file-uploader",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx src/server.ts",
-    "build": "vite build"
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "start": "node dist/server.js"
   },
   "author": "",
   "license": "ISC",
@@ -19,7 +21,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
-    "vue": "^3.5.28"
+    "vue": "^3.5.28",
+    "vue-tsc": "^3.2.4"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
