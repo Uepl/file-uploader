@@ -6,7 +6,8 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import { db, storage } from './config/firebase.js';
 import { generateKeys, getPublicKey } from './utils/keyManager.js';
-
+import { authenticateToken } from './middleware/auth.js';
+import authRoutes from './routes/authRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -28,6 +29,10 @@ app.use(express.static(path.join(__dirname, '../dist')));
 generateKeys();
 
 // API Routes
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+app.use('/api/auth', authRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -43,14 +48,14 @@ app.get('/api/public-key', (req, res) => {
 // Upload Endpoint
 const upload = multer({ storage: multer.memoryStorage() }); // Keep memory storage for buffering small chunks if needed, or stream directly
 
-app.post('/api/upload', upload.fields([
+app.post('/api/upload', authenticateToken, upload.fields([
   { name: 'encryptedFile', maxCount: 1 },
   { name: 'encryptedKey', maxCount: 1 },
   { name: 'iv', maxCount: 1 }
-]), async (req, res) => {
+]), async (req: any, res: any) => {
   try {
     const { originalName } = req.body;
-
+    const userId = req.user.uid;
     // Access files from req.files
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
@@ -78,6 +83,7 @@ app.post('/api/upload', upload.fields([
     // 2. Save Metadata to Firestore
     // Store the encrypted key and IV as base64 strings or Blobs in Firestore
     const metadata = {
+      userId,
       originalName,
       storagePath, // gs://bucket-name/path/to/file
       storageType: 'gcs',
