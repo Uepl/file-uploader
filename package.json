@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx src/server.ts",
-    "build": "vite build && tsc -p tsconfig.server.json",
+    "dev:server": "tsx server/src/server.ts",
+    "dev:client": "vite client",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build client",
+    "build:server": "tsc -p server/tsconfig.server.json",
     "start": "node dist/server.js"
   },
   "author": "",

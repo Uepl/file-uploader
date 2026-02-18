@@ -1,5 +1,3 @@
-
-
 export class CryptoService {
     /**
      * Generates a random AES-GCM key
