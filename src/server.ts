@@ -35,21 +35,43 @@ let publicKeyPem: string;
 let privateKeyPem: string;
 
 const generateKeys = () => {
-  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
-    modulusLength: 2048,
-    publicKeyEncoding: {
-      type: 'spki',
-      format: 'pem'
-    },
-    privateKeyEncoding: {
-      type: 'pkcs8',
-      format: 'pem'
-    }
-  });
+  if (process.env.PRIVATE_KEY) {
+    try {
+      // Trim() removes any accidental spaces/newlines at the very start or end
+      const rawKey = process.env.PRIVATE_KEY.trim();
+      privateKeyPem = rawKey.replace(/\\n/g, '\n');
 
-  publicKeyPem = publicKey;
-  privateKeyPem = privateKey;
-  console.log('RSA Key Pair Generated (Warning: Ephemeral Keys)');
+      // Derive public key
+      const publicKeyObject = crypto.createPublicKey(privateKeyPem);
+      publicKeyPem = publicKeyObject.export({
+        type: 'spki',
+        format: 'pem'
+      }) as string;
+
+      console.log('✅ Success: RSA Key pair ready.');
+    } catch (error) {
+      console.error('❌ Critical Error: The PRIVATE_KEY in .env is invalid!');
+      console.error('Reason:', error.message);
+      // Optional: process.exit(1); 
+    }
+  } else {
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem'
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem'
+      }
+    });
+
+    publicKeyPem = publicKey;
+    privateKeyPem = privateKey;
+    console.log('RSA Key Pair Generated (Warning: Ephemeral Keys)');
+  }
+
 };
 
 // Generate keys on startup
