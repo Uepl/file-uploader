@@ -15,7 +15,6 @@ const bucketName = process.env.GCS_BUCKET_NAME || 'your-bucket-name';
 const bucket = storage.bucket(bucketName);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(helmet());
@@ -166,7 +165,8 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 */
+const PORT = Number(process.env.PORT) || 3000;
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
