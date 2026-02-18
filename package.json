@@ -9,7 +9,7 @@
     "dev:client": "vite client",
     "dev": "npm run dev:client && npm run dev:server",
     "build": "npm run build:client && npm run build:server",
-    "build:client": "vite build client",
+    "build:client": "vue-tsc -p client/tsconfig.client.json && vite build client",
     "build:server": "tsc -p server/tsconfig.server.json",
     "start": "node dist/server.js"
   },
@@ -30,13 +30,17 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
+    "@tailwindcss/vite": "^4.2.0",
+    "@vueuse/core": "^14.2.1",
     "argon2": "^0.44.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "firebase-admin": "^13.6.1",
     "helmet": "^8.1.0",
+    "lucide-vue-next": "^0.574.0",
     "multer": "^2.0.2",
+    "tailwindcss": "^4.2.0",
     "vue-router": "^4.6.4"
   }
 }

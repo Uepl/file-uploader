@@ -1,13 +1,16 @@
 {
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "NodeNext",
+    "lib": ["ES2020"],
+    "module": "NodeNext", 
     "moduleResolution": "NodeNext",
     "outDir": "../dist",
     "rootDir": "./src",
-    "strict": true,
-    "skipLibCheck": true,
-    "noEmit": false 
+    
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["src/server.ts", "src/firebase.ts"]
+  "include": ["src/**/*.ts"]
 }

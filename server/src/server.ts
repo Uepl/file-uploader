@@ -19,19 +19,18 @@ const app = express();
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost', 'http://localhost:80'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
-// Serve static files from the 'dist' directory (after build)
-app.use(express.static(path.join(__dirname, '../dist')));
 
 // Generate keys on startup
 generateKeys();
 
 // API Routes
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
 app.use('/api/auth', authRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -42,6 +41,7 @@ app.get('/api/public-key', (req, res) => {
   if (!key) {
     return res.status(503).json({ error: 'Keys not yet generated' });
   }
+  console.log("Sending public key to client")
   res.json({ publicKey: key });
 });
 
