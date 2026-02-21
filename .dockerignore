@@ -3,3 +3,4 @@ certs
 .git
 .env
 npm-debug.log
+log/*.log
