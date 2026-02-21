@@ -15,7 +15,7 @@ services:
       target: server
     container_name: uploader-api
     volumes:
-      - ./log:/app/log
+      - ./log:/app/logs
     restart: always
     env_file: .env
 
