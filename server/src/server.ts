@@ -20,7 +20,7 @@ const app = express();
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost', 'http://localhost:80'],
+  origin: ['http://localhost', 'http://localhost:80', 'https://file-uploader-in-dierl.duckdns.org'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -46,7 +46,10 @@ app.get('/api/public-key', (req, res) => {
 });
 
 // Upload Endpoint
-const upload = multer({ storage: multer.memoryStorage() }); // Keep memory storage for buffering small chunks if needed, or stream directly
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }
+}); // Keep memory storage for buffering small chunks if needed, or stream directly
 
 app.post('/api/upload', authenticateToken, upload.fields([
   { name: 'encryptedFile', maxCount: 1 },

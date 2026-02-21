@@ -9,7 +9,6 @@ COPY . .
 FROM base AS builder
 RUN npm run build:client
 RUN npm run build:server
-RUN find /app -type d -name "dist"
 # --- TARGET: server (Used by the 'api' service) ---
 FROM node:22-alpine AS server
 WORKDIR /app
@@ -27,5 +26,5 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # (Optional) If you want the same container to run the API:
 # It's usually better to keep them separate in docker-compose, 
 # but you can copy the server build here if needed.
-EXPOSE 80
+EXPOSE 80 443
 CMD ["nginx", "-g", "daemon off;"]

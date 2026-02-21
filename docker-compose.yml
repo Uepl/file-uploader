@@ -1,5 +1,13 @@
 
 services:
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    container_name: duckdns
+    environment:
+      - SUBDOMAINS=file-uploader-in-dierl
+      - TOKEN=${DUCKDNS_TOKEN}
+    restart: always
+      
   # Your Full-Stack API
   api:
     build:
@@ -18,7 +26,13 @@ services:
       target: static-site 
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./certs:/etc/letsencrypt:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - api
+    restart: always
+
+volumes:
+  certs:
