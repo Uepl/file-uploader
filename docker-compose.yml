@@ -6,6 +6,7 @@ services:
     env_file: .env
     environment:
       - SUBDOMAINS=file-uploader-in-dierl
+      - TOKEN=${DUCKDNS_TOKEN}
     restart: always
 
   api:
