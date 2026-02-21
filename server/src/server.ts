@@ -18,6 +18,7 @@ const bucketName = process.env.GCS_BUCKET_NAME || 'your-bucket-name';
 const bucket = storage.bucket(bucketName);
 
 const app = express();
+app.set('trust proxy', true);
 
 // Middleware
 app.use(helmet());
