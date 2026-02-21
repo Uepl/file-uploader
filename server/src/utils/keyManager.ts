@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import logger from './logger';
+import logger from './logger.js';
 
 let publicKeyPem: string;
 let privateKeyPem: string;
