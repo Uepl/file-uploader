@@ -3,27 +3,24 @@ services:
   duckdns:
     image: lscr.io/linuxserver/duckdns:latest
     container_name: duckdns
+    env_file: .env
     environment:
       - SUBDOMAINS=file-uploader-in-dierl
-      - TOKEN=${DUCKDNS_TOKEN}
     restart: always
-      
-  # Your Full-Stack API
+
   api:
     build:
       context: .
       target: server
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
+    container_name: uploader-api
     restart: always
+    env_file: .env
 
-  # Reverse Proxy (Shows you know networking!)
   nginx:
     build:
       context: .
       target: static-site 
+    container_name: uploader-nginx
     ports:
       - "80:80"
       - "443:443"
@@ -33,6 +30,3 @@ services:
     depends_on:
       - api
     restart: always
-
-volumes:
-  certs:
