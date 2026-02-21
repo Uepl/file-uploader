@@ -38,7 +38,7 @@
     "express": "^5.2.1",
     "firebase-admin": "^13.6.1",
     "helmet": "^8.1.0",
-    "lucide-vue-next": "^0.574.0",
+    "lucide-vue-next": "^0.575.0",
     "multer": "^2.0.2",
     "rate-limiter-flexible": "^9.1.1",
     "tailwindcss": "^4.2.0",
