@@ -8,6 +8,7 @@ import { db, storage } from './config/firebase.js';
 import { generateKeys, getPublicKey } from './utils/keyManager.js';
 import { authenticateToken } from './middleware/auth.js';
 import authRoutes from './routes/authRoutes.js';
+import { generalRateLimit, uploadRateLimit } from './middleware/rateLimiter.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -27,6 +28,7 @@ app.use(cors({
 app.use(express.json());
 
 
+app.use(generalRateLimit);
 // Generate keys on startup
 generateKeys();
 
@@ -51,7 +53,7 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }
 }); // Keep memory storage for buffering small chunks if needed, or stream directly
 
-app.post('/api/upload', authenticateToken, upload.fields([
+app.post('/api/upload', uploadRateLimit, authenticateToken, upload.fields([
   { name: 'encryptedFile', maxCount: 1 },
   { name: 'encryptedKey', maxCount: 1 },
   { name: 'iv', maxCount: 1 }

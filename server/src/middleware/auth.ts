@@ -11,12 +11,12 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         return res.sendStatus(401);
     }
 
-    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) {
             console.log('JWT Verification Failed:', err.message);
             return res.sendStatus(403);
         }
-        (req as any).user = user;
+        req.user = decoded as { uid: string };
         next();
     });
 };
