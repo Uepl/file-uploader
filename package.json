@@ -42,6 +42,8 @@
     "multer": "^2.0.2",
     "rate-limiter-flexible": "^9.1.1",
     "tailwindcss": "^4.2.0",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   }
 }

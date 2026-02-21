@@ -1,5 +1,5 @@
-// src/utils/keyManager.ts
 import crypto from 'node:crypto';
+import logger from './logger';
 
 let publicKeyPem: string;
 let privateKeyPem: string;
@@ -20,11 +20,10 @@ export const generateKeys = () => {
                 format: 'pem'
             }) as string;
 
-            console.log('✅ Success: RSA Key pair ready.');
+            logger.info('RSA Key pair successfully loaded from environment.');
         } catch (error) {
-            console.error('❌ Critical Error: The PRIVATE_KEY in .env is invalid!');
-            console.error('Reason:', error);
-            // Optional: process.exit(1); 
+            logger.error('Failed to load RSA key from PRIVATE_KEY environment variable', { error });
+            process.exit(1);
         }
     } else {
         const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
@@ -41,7 +40,8 @@ export const generateKeys = () => {
 
         publicKeyPem = publicKey;
         privateKeyPem = privateKey;
-        console.log('RSA Key Pair Generated (Warning: Ephemeral Keys)');
+
+        logger.warn('No PRIVATE_KEY found in .env. Generated ephemeral RSA keys. Files encrypted now cannot be decrypted after server restart!');
     }
 
 };

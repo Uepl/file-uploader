@@ -9,6 +9,7 @@ import { generateKeys, getPublicKey } from './utils/keyManager.js';
 import { authenticateToken } from './middleware/auth.js';
 import authRoutes from './routes/authRoutes.js';
 import { generalRateLimit, uploadRateLimit } from './middleware/rateLimiter.js';
+import logger from './utils/logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -41,9 +42,10 @@ app.get('/api/health', (req, res) => {
 app.get('/api/public-key', (req, res) => {
   const key = getPublicKey();
   if (!key) {
+    logger.error("Public key request failed: Keys not yet generated");
     return res.status(503).json({ error: 'Keys not yet generated' });
   }
-  console.log("Sending public key to client")
+  logger.info("Public key served to client", { ip: req.ip });
   res.json({ publicKey: key });
 });
 
@@ -101,8 +103,12 @@ app.post('/api/upload', uploadRateLimit, authenticateToken, upload.fields([
 
     const docRef = await db.collection('files').add(metadata);
 
-    console.log(`File uploaded to GCS: ${storagePath}`);
-    console.log(`Metadata saved to Firestore: ${docRef.id}`);
+    logger.info("File upload successful", {
+      userId,
+      fileId: docRef.id,
+      storagePath,
+      size: metadata.size
+    });
 
     res.json({
       status: 'success',
@@ -111,7 +117,10 @@ app.post('/api/upload', uploadRateLimit, authenticateToken, upload.fields([
     });
 
   } catch (error) {
-    console.error('Upload failed:', error);
+    logger.error("Upload process failed", {
+      error,
+      userId: req.user?.uid
+    });
     res.status(500).json({ error: 'Processing failed' });
   }
 });
@@ -120,5 +129,5 @@ app.post('/api/upload', uploadRateLimit, authenticateToken, upload.fields([
 const PORT = Number(process.env.PORT) || 3000;
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  logger.info(`Server initialized and listening on port ${PORT}`, { env: process.env.NODE_ENV });
 });
