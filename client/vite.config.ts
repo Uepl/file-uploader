@@ -8,7 +8,7 @@ export default defineConfig({
     plugins: [vue(), tailwindcss()],
     root: './', // Tells Vite the index.html is right here in the client folder
     build: {
-        outDir: '../dist', // Keeps your build files organized
+        outDir: '../dist/client', // Keeps your build files organized
         emptyOutDir: true,
     },
     server: {

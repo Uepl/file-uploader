@@ -1,29 +1,39 @@
-# --- STAGE 1: Base ---
-FROM node:22-alpine AS base
+# --- STAGE 1: Deps ---
+FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
-COPY . .
+# Use ci for faster, more reliable installs
+RUN npm ci
 
 # --- STAGE 2: Builder ---
-FROM base AS builder
-# Limit memory for the compiler so it doesn't crash the e2-micro
+FROM node:22-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=768"
-RUN npm run build:client
-RUN npm run build:server
+RUN npm run build:client && npm run build:server
 
 # --- STAGE 3: Production API ---
 FROM node:22-alpine AS server
 WORKDIR /app
-COPY --from=builder /app/package*.json ./
-RUN npm install --omit=dev
-COPY --from=builder /app/dist ./dist
-# Your code uses this to find the GCS bucket
-EXPOSE 3000
-CMD ["node", "dist/server.js"]
+ENV NODE_ENV=production
 
-# --- STAGE 4: Static Site (Nginx) ---
+# 1. Copy package files first for better layer caching
+COPY --from=builder /app/package*.json ./
+
+# 2. Install production dependencies (cached unless package.json changes)
+RUN npm ci --omit=dev && npm cache clean --force
+
+# 3. Copy only the server build
+COPY --from=builder /app/dist/server ./dist/server
+
+EXPOSE 3000
+CMD ["node", "dist/server/server.js"]
+
+# --- STAGE 4: Static Site ---
 FROM nginx:stable-alpine AS static-site
+# Strip default config
+RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY --from=builder /app/dist/ /usr/share/nginx/html
+COPY --from=builder /app/dist/client /usr/share/nginx/html
 EXPOSE 80 443

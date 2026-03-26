@@ -11,7 +11,7 @@
     "build": "npm run build:client && npm run build:server",
     "build:client": "vue-tsc -p client/tsconfig.client.json && vite build client",
     "build:server": "tsc -p server/tsconfig.server.json",
-    "start": "node dist/server.js",
+    "start": "node dist/server/server.js",
     "lint": "eslint server/src --ext .ts",
     "lint:fix": "eslint server/src --ext .ts --fix"
   },

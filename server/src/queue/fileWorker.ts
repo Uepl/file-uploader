@@ -13,15 +13,11 @@ try {
   logger.error("Failed to initialize Google Cloud Storage bucket in worker", e);
 }
 
-const redisHost = process.env.REDIS_HOST || 'localhost';
-const redisPort = Number(process.env.REDIS_PORT) || 18101;
-const username = process.env.REDIS_USERNAME || 'default';
-const password = process.env.REDIS_PASSWORD || 'my-top-secret';
+const redisHost = process.env.REDIS_HOST || 'redis';
+const redisPort = Number(process.env.REDIS_PORT) || 6379;
 const connection = new IORedis({
   host: redisHost,
   port: redisPort,
-  username: username,
-  password: password,
   maxRetriesPerRequest: null,
 });
 
