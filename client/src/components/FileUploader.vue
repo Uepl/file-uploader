@@ -121,7 +121,7 @@ const uploadFile = async () => {
 };
 </script>
 <template>
-  <div class="flex items-center justify-center min-h-[600px] p-6 bg-gray-50/50">
+  <div class="flex items-center justify-center min-h-150 p-6 bg-gray-50/50">
 
     <div class="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
 

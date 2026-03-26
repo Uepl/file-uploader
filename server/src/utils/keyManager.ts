@@ -47,3 +47,4 @@ export const generateKeys = () => {
 };
 
 export const getPublicKey = () => publicKeyPem;
+export const getPrivateKey = () => privateKeyPem;

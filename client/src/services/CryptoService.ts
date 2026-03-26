@@ -53,9 +53,44 @@ export class CryptoService {
     }
 
     /**
+     * Decrypts file data using AES key and IV
+     */
+    static async decryptFileData(
+        encryptedBuffer: ArrayBuffer,
+        aesKey: CryptoKey,
+        iv: Uint8Array<ArrayBuffer>
+    ): Promise<ArrayBuffer> {
+        return window.crypto.subtle.decrypt(
+            {
+                name: 'AES-GCM',
+                iv: iv,
+            },
+            aesKey,
+            encryptedBuffer
+        );
+    }
+
+    /**
+     * Imports an AES key from raw bytes
+     */
+    static async importAesKey(rawKeyData: ArrayBuffer): Promise<CryptoKey> {
+        return window.crypto.subtle.importKey(
+            'raw',
+            rawKeyData,
+            {
+                name: 'AES-GCM',
+                length: 256,
+            },
+            true, // extractable
+            ['encrypt', 'decrypt']
+        );
+    }
+
+    /**
      * Export key to raw format (for debugging/logging ONLY - not used in secure flow)
      */
     static async exportKeyRaw(key: CryptoKey): Promise<ArrayBuffer> {
         return window.crypto.subtle.exportKey('raw', key);
     }
 }
+
