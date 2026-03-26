@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
+  "lint": "eslint server/src --ext .ts --fix",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev:server": "tsx server/src/server.ts",

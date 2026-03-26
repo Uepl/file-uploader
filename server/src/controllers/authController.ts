@@ -2,10 +2,10 @@ import { Request, Response } from 'express';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
-import { User, UserModel } from '../models/userModel.js';
-import logger from '../utils/logger.js';
-import { db, storage } from '../config/firebase.js';
-import { getPrivateKey } from '../utils/keyManager.js';
+import { User, UserModel } from '../models/userModel';
+import logger from '../utils/logger';
+import { db, storage } from '../config/firebase';
+import { getPrivateKey } from '../utils/keyManager';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const bucketName = process.env.GCS_BUCKET_NAME || 'your-bucket-name';
