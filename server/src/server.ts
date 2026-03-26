@@ -10,6 +10,8 @@ import { authenticateToken } from './middleware/auth.js';
 import authRoutes from './routes/authRoutes.js';
 import { generalRateLimit, uploadRateLimit } from './middleware/rateLimiter.js';
 import logger from './utils/logger.js';
+import { addFileJob } from './queue/fileQueue.js';
+import './queue/fileWorker.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -76,45 +78,21 @@ app.post('/api/upload', uploadRateLimit, authenticateToken, upload.fields([
     const encryptedKeyBuffer = files['encryptedKey'][0].buffer;
     const ivBuffer = files['iv'][0].buffer;
 
-    // 1. Upload to Google Cloud Storage
-    const timestamp = Date.now();
-    const destination = `uploads/${timestamp}_${originalName}`;
-    const file = bucket.file(destination);
-
-    await file.save(encryptedFileBuffer, {
-      contentType: 'application/octet-stream',
-      resumable: false // Simple upload for now
-    });
-
-    const storagePath = `gs://${bucket.name}/${destination}`;
-
-    // 2. Save Metadata to Firestore
-    // Store the encrypted key and IV as base64 strings or Blobs in Firestore
-    const metadata = {
-      userId,
+    // 1. Queue background job to process the file and upload to Google Cloud Storage
+    const job = await addFileJob({
       originalName,
-      storagePath, // gs://bucket-name/path/to/file
-      storageType: 'gcs',
-      uploadDate: new Date(),
-      encryptedKey: encryptedKeyBuffer.toString('base64'),
-      iv: ivBuffer.toString('base64'),
+      userId,
+      encryptedFileBuffer,
+      encryptedKeyBase64: encryptedKeyBuffer.toString('base64'),
+      ivBase64: ivBuffer.toString('base64'),
       size: encryptedFileBuffer.length,
       contentType: 'application/octet-stream'
-    };
-
-    const docRef = await db.collection('files').add(metadata);
-
-    logger.info("File upload successful", {
-      userId,
-      fileId: docRef.id,
-      storagePath,
-      size: metadata.size
     });
 
     res.json({
       status: 'success',
-      message: 'File uploaded securely to Google Cloud Storage',
-      fileId: docRef.id
+      message: 'File upload queued for background processing',
+      jobId: job.id
     });
 
   } catch (error) {
