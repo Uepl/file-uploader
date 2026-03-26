@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
-  "lint": "eslint server/src --ext .ts --fix",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev:server": "tsx server/src/server.ts",
@@ -12,7 +11,9 @@
     "build": "npm run build:client && npm run build:server",
     "build:client": "vue-tsc -p client/tsconfig.client.json && vite build client",
     "build:server": "tsc -p server/tsconfig.server.json",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "lint": "eslint server/src --ext .ts",
+    "lint:fix": "eslint server/src --ext .ts --fix"
   },
   "author": "",
   "license": "ISC",
@@ -22,7 +23,10 @@
     "@types/express": "^5.0.6",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
     "@vitejs/plugin-vue": "^6.0.4",
+    "eslint-plugin-import": "^2.32.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",

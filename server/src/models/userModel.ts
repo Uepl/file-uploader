@@ -1,5 +1,5 @@
-import { db } from '../config/firebase';
-import logger from '../utils/logger';
+import { db } from '../config/firebase.js';
+import logger from '../utils/logger.js';
 
 // 1. Define the User Interface
 export interface User {
