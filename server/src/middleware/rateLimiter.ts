@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
+import logger from '../utils/logger';
 
 // 1. Setup the Limiter Instances
 const generalLimiter = new RateLimiterMemory({
@@ -22,16 +23,29 @@ export const generalRateLimit = (req: Request, res: Response, next: NextFunction
     generalLimiter.consume(ip)
         .then(() => next())
         .catch(() => {
+            logger.warn('General rate limit exceeded', {
+                ip,
+                path: req.path,
+                method: req.method
+            });
             res.status(429).json({ error: 'Too many requests' });
         });
 };
 
 export const uploadRateLimit = (req: Request, res: Response, next: NextFunction) => {
-    uploadLimiter.consume(req.ip!)
+    const ip = req.ip!;
+    uploadLimiter.consume(ip)
         .then((rateLimiterRes) => {
             // Optional: Tell the user how many they have left
             res.set('X-RateLimit-Limit', '3');
             res.set('X-RateLimit-Remaining', String(rateLimiterRes.remainingPoints));
+
+            logger.info('Upload request allowed', {
+                ip,
+                path: req.path,
+                remainingPoints: rateLimiterRes.remainingPoints
+            });
+
             next();
         })
         .catch((rateLimiterRes) => {
@@ -42,6 +56,13 @@ export const uploadRateLimit = (req: Request, res: Response, next: NextFunction)
 
             // Custom Headers (Good for debugging)
             res.set('X-RateLimit-Reset', new Date(Date.now() + rateLimiterRes.msBeforeNext).toISOString());
+
+            logger.warn('Upload rate limit exceeded', {
+                ip,
+                path: req.path,
+                retryAfterSeconds: retryAfter,
+                resetAt: new Date(Date.now() + rateLimiterRes.msBeforeNext).toISOString()
+            });
 
             res.status(429).json({
                 error: 'Upload limit reached',
