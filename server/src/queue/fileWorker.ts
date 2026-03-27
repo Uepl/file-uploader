@@ -1,7 +1,8 @@
 import { Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import logger from '../utils/logger.js';
-import { db, storage } from '../config/firebase.js';
+import { storage } from '../config/firebase.js';
+import { FileModel } from '../models/fileModel.js';
 
 const bucketName = process.env.GCS_BUCKET_NAME || 'your-bucket-name';
 
@@ -43,8 +44,8 @@ const processFile = async (job: Job) => {
 
     const storagePath = `gs://${bucket.name}/${destination}`;
 
-    // 2. Save Metadata to Firestore
-    const metadata = {
+    // 2. Save Metadata to Firestore using FileModel
+    const fileId = await FileModel.create({
       userId,
       originalName,
       storagePath,
@@ -54,18 +55,16 @@ const processFile = async (job: Job) => {
       iv: ivBase64,
       size,
       contentType
-    };
-
-    const docRef = await db.collection('files').add(metadata);
+    });
 
     logger.info(`Worker finished job ${job.id}: Upload successful`, {
       userId,
-      fileId: docRef.id,
+      fileId,
       storagePath,
       size
     });
 
-    return { fileId: docRef.id, storagePath };
+    return { fileId, storagePath };
   } catch (error) {
     logger.error(`Worker failed processing job ${job.id}`, error);
     throw error;
@@ -81,3 +80,4 @@ fileWorker.on('completed', (job) => {
 fileWorker.on('failed', (job, err) => {
   logger.error(`Job ${job?.id} has failed with ${err.message}`);
 });
+

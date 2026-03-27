@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import crypto from 'node:crypto';
 import logger from '../utils/logger.js';
-import { db, storage } from '../config/firebase.js';
+import { storage } from '../config/firebase.js';
 import { getPublicKey, getPrivateKey } from '../utils/keyManager.js';
 import { addFileJob } from '../queue/fileQueue.js';
+import { FileModel } from '../models/fileModel.js';
 
 const bucketName = process.env.GCS_BUCKET_NAME || 'your-bucket-name';
 const bucket = storage.bucket(bucketName);
@@ -65,21 +66,18 @@ export const listFiles = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const snapshot = await db.collection('files')
-      .where('userId', '==', userId)
-      .orderBy('uploadDate', 'desc')
-      .get();
+    const files = await FileModel.findByUserId(userId);
 
-    const files = snapshot.docs.map(doc => ({
-      id: doc.id,
-      originalName: doc.data().originalName,
-      size: doc.data().size,
-      uploadDate: doc.data().uploadDate?.toDate?.(),
-      contentType: doc.data().contentType
+    const fileList = files.map(file => ({
+      id: file.id,
+      originalName: file.originalName,
+      size: file.size,
+      uploadDate: file.uploadDate,
+      contentType: file.contentType
     }));
 
-    logger.info("Files listed successfully", { userId, fileCount: files.length });
-    res.json({ files });
+    logger.info("Files listed successfully", { userId, fileCount: fileList.length });
+    res.json({ files: fileList });
   } catch (error) {
     logger.error("List files failed", { error, userId: req.user?.uid });
     res.status(500).json({ error: 'Failed to list files' });
@@ -99,16 +97,15 @@ export const downloadFile = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'File ID required' });
     }
 
-    const fileDoc = await db.collection('files').doc(fileId).get();
-    if (!fileDoc.exists || fileDoc.data()?.userId !== userId) {
+    const fileData = await FileModel.findById(fileId);
+    if (!fileData || fileData.userId !== userId) {
       logger.warn("Unauthorized download attempt", { fileId, userId, ip: req.ip });
       return res.status(403).json({ error: 'File not found or unauthorized' });
     }
 
-    const fileData = fileDoc.data();
-    const storagePath = fileData?.storagePath;
-    const encryptedKeyBase64 = fileData?.encryptedKey;
-    const ivBase64 = fileData?.iv;
+    const storagePath = fileData.storagePath;
+    const encryptedKeyBase64 = fileData.encryptedKey;
+    const ivBase64 = fileData.iv;
 
     if (!storagePath || !encryptedKeyBase64 || !ivBase64) {
       return res.status(404).json({ error: 'File metadata incomplete' });
@@ -138,8 +135,8 @@ export const downloadFile = async (req: Request, res: Response) => {
     }
 
     res.set({
-      'Content-Type': fileData?.contentType || 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(fileData?.originalName || 'file')}"`,
+      'Content-Type': fileData.contentType || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(fileData.originalName || 'file')}"`,
       'Content-Length': fileBuffer.length,
       'X-Encrypted-Key': unwrappedAesKey.toString('base64'),
       'X-IV': ivBase64
@@ -166,16 +163,15 @@ export const deleteFile = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'File ID required' });
     }
 
-    const fileDoc = await db.collection('files').doc(fileId).get();
-    if (!fileDoc.exists || fileDoc.data()?.userId !== userId) {
+    const fileData = await FileModel.findById(fileId);
+    if (!fileData || fileData.userId !== userId) {
       logger.warn("Unauthorized delete attempt", { fileId, userId, ip: req.ip });
       return res.status(403).json({ error: 'File not found or unauthorized' });
     }
 
-    const fileData = fileDoc.data();
-    const storagePath = fileData?.storagePath;
+    const storagePath = fileData.storagePath;
 
-    await db.collection('files').doc(fileId).delete();
+    await FileModel.delete(fileId);
 
     if (storagePath) {
       const pathWithoutBucket = storagePath.replace(`gs://${bucketName}/`, '');
@@ -207,16 +203,13 @@ export const renameFile = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'File ID and new name required' });
     }
 
-    const fileDoc = await db.collection('files').doc(fileId).get();
-    if (!fileDoc.exists || fileDoc.data()?.userId !== userId) {
+    const fileData = await FileModel.findById(fileId);
+    if (!fileData || fileData.userId !== userId) {
       logger.warn("Unauthorized rename attempt", { fileId, userId, ip: req.ip });
       return res.status(403).json({ error: 'File not found or unauthorized' });
     }
 
-    await db.collection('files').doc(fileId).update({
-      originalName: newName,
-      updatedAt: new Date()
-    });
+    await FileModel.update(fileId, { originalName: newName });
 
     logger.info("File renamed successfully", { fileId, userId, newName });
     res.json({ message: 'File renamed successfully', originalName: newName });
@@ -225,3 +218,4 @@ export const renameFile = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to rename file' });
   }
 };
+
