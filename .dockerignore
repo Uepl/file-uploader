@@ -5,3 +5,4 @@ certs
 npm-debug.log
 dist
 log/*.log
+redis-data/

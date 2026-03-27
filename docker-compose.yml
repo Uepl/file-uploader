@@ -50,13 +50,14 @@ services:
     image: redis:7-alpine
     container_name: uploader-redis
     restart: always
-    ports:
-      - "6379:6379"
     volumes:
-      - ./redis-data:/data
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     command: redis-server --appendonly yes
+
+volumes:
+  redis_data:
