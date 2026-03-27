@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import { UploadCloud, FileLock, Loader2, CheckCircle2, XCircle, ShieldCheck, RefreshCw } from 'lucide-vue-next';
 import { KeyUtils } from '../utils/KeyUtils';
 import { CryptoService } from '../services/CryptoService';
+import { FileService } from '../services/FileService';
 
 // --- State ---
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -65,10 +66,7 @@ const uploadFile = async () => {
     statusMessage.value = 'Encrypting file chunks...';
 
     // 1. Fetch Server IO Public Key
-    const publicKeyRes = await fetch('/api/public-key');
-    if (!publicKeyRes.ok) throw new Error('Failed to fetch public key');
-
-    const { publicKey: publicKeyPem } = await publicKeyRes.json();
+    const publicKeyPem = await FileService.getPublicKey();
 
     // 2. Import Public Key
     const rsaPublicKey = await KeyUtils.importPublicKey(publicKeyPem);
@@ -93,19 +91,8 @@ const uploadFile = async () => {
     formData.append('iv', new Blob([iv.buffer as ArrayBuffer]), 'iv.dat');
 
     // 7. Upload
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: formData
-    });
+    const result = await FileService.uploadFile(formData);
 
-    if (!response.ok) {
-      throw new Error('Upload failed on server');
-    }
-
-    const result = await response.json();
     statusMessage.value = `Success! ${result.message}`;
     status.value = 'success';
 

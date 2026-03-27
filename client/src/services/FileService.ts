@@ -48,7 +48,7 @@ export const FileService = {
      * Get list of user's uploaded files
      */
     async getFiles(): Promise<FileMetadata[]> {
-        const response = await fetch(`/api/auth/files`, {
+        const response = await fetch(`/api/files`, {
             method: 'GET',
             headers: createHeaders()
         });
@@ -71,7 +71,7 @@ export const FileService = {
     async downloadAndDecryptFile(fileId: string): Promise<DecryptedFile> {
         // Fetch encrypted file and metadata
         const response = await fetch(
-            `/api/auth/files/${fileId}/download`,
+            `/api/files/${fileId}/download`,
             {
                 method: 'GET',
                 headers: {
@@ -130,7 +130,7 @@ export const FileService = {
      */
     async deleteFile(fileId: string): Promise<void> {
         const response = await fetch(
-            `/api/auth/files/${fileId}`,
+            `/api/files/${fileId}`,
             {
                 method: 'DELETE',
                 headers: createHeaders()
@@ -147,7 +147,7 @@ export const FileService = {
      */
     async renameFile(fileId: string, newName: string): Promise<void> {
         const response = await fetch(
-            `/api/auth/files/${fileId}`,
+            `/api/files/${fileId}`,
             {
                 method: 'PATCH',
                 headers: createHeaders(),
@@ -158,6 +158,39 @@ export const FileService = {
         if (!response.ok) {
             throw new Error(`Failed to rename file: ${response.statusText}`);
         }
+    },
+
+    /**
+     * Fetch the server's RSA public key for session key wrapping
+     */
+    async getPublicKey(): Promise<string> {
+        const response = await fetch('/api/public-key');
+        if (!response.ok) {
+            throw new Error('Failed to fetch public key');
+        }
+        const { publicKey } = await response.json();
+        return publicKey;
+    },
+
+    /**
+     * Upload an encrypted file with its wrapped key and IV
+     */
+    async uploadFile(formData: FormData): Promise<{ message: string }> {
+        const token = getAuthToken();
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Upload failed on server');
+        }
+
+        return await response.json();
     }
 };
 
