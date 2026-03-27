@@ -6,13 +6,7 @@ import { FileModel } from '../models/fileModel.js';
 
 const bucketName = process.env.GCS_BUCKET_NAME || 'your-bucket-name';
 
-// Need to safely check if bucket exists because during test/dev it might fail without credentials
-let bucket: any;
-try {
-  bucket = storage.bucket(bucketName);
-} catch (e) {
-  logger.error("Failed to initialize Google Cloud Storage bucket in worker", e);
-}
+// Bucket initialization removed as GCS upload now happens in the controller
 
 const redisHost = process.env.REDIS_HOST || 'redis';
 const redisPort = Number(process.env.REDIS_PORT) || 6379;
@@ -23,26 +17,21 @@ const connection = new IORedis({
 });
 
 const processFile = async (job: Job) => {
-  const { originalName, userId, encryptedFileBuffer, encryptedKeyBase64, ivBase64, size, contentType } = job.data;
+  const { originalName, userId, storagePath, encryptedKeyBase64, ivBase64, size, contentType } = job.data;
 
   logger.info(`Worker starting processing for job ${job.id}`);
 
   try {
-    // Note: Passing raw Buffers through Redis is unoptimized for large files. 
-    // In production with 100MB+ files, it's better to save to disk first and pass the filepath.
-    const fileBuffer = Buffer.from(encryptedFileBuffer);
+    // 1. Storage path is now provided by the controller, so no upload is needed here.
+    if (!storagePath) {
+      throw new Error(`No storagePath provided for job ${job.id}`);
+    }
 
-    // 1. Upload to Google Cloud Storage
-    const timestamp = Date.now();
-    const destination = `uploads/${timestamp}_${originalName}`;
-    const file = bucket.file(destination);
-
-    await file.save(fileBuffer, {
-      contentType: contentType,
-      resumable: false
-    });
-
-    const storagePath = `gs://${bucket.name}/${destination}`;
+    const pathWithoutBucket = storagePath.replace(`gs://${bucketName}/`, '');
+    const [exists] = await storage.bucket(bucketName).file(pathWithoutBucket).exists();
+    if (!exists) {
+      throw new Error(`File not found at ${pathWithoutBucket}. Aborting metadata save.`);
+    }
 
     // 2. Save Metadata to Firestore using FileModel
     const fileId = await FileModel.create({
@@ -57,7 +46,7 @@ const processFile = async (job: Job) => {
       contentType
     });
 
-    logger.info(`Worker finished job ${job.id}: Upload successful`, {
+    logger.info(`Worker finished job ${job.id}: Metadata saved successfully`, {
       userId,
       fileId,
       storagePath,

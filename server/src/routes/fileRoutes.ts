@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import multer from 'multer';
 import { 
   getPublicKeyHandler, 
   uploadFile, 
@@ -13,18 +12,9 @@ import { uploadRateLimit } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }
-});
-
 router.get('/public-key', getPublicKeyHandler);
 
-router.post('/upload', uploadRateLimit, authenticateToken, upload.fields([
-  { name: 'encryptedFile', maxCount: 1 },
-  { name: 'encryptedKey', maxCount: 1 },
-  { name: 'iv', maxCount: 1 }
-]), uploadFile);
+router.post('/upload', uploadRateLimit, authenticateToken, uploadFile);
 
 // File management routes
 router.get('/files', authenticateToken, listFiles);

@@ -6,6 +6,8 @@ import { getPublicKey, getPrivateKey } from '../utils/keyManager.js';
 import { addFileJob } from '../queue/fileQueue.js';
 import { FileModel } from '../models/fileModel.js';
 
+import busboy from 'busboy';
+
 const bucketName = process.env.GCS_BUCKET_NAME || 'your-bucket-name';
 const bucket = storage.bucket(bucketName);
 
@@ -19,43 +21,104 @@ export const getPublicKeyHandler = (req: Request, res: Response) => {
   res.json({ publicKey: key });
 };
 
-export const uploadFile = async (req: any, res: any) => {
+export const uploadFile = async (req: Request, res: Response) => {
   try {
-    const { originalName } = req.body;
-    const userId = req.user.uid;
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const bb = busboy({ headers: req.headers });
+    const userId = (req as any).user?.uid;
 
-    if (!files || !files['encryptedFile']?.[0] || !files['encryptedKey']?.[0] || !files['iv']?.[0]) {
-      res.status(400).json({ error: 'Missing required files' });
-      return;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const encryptedFileBuffer = files['encryptedFile'][0].buffer;
-    const encryptedKeyBuffer = files['encryptedKey'][0].buffer;
-    const ivBuffer = files['iv'][0].buffer;
+    let storagePath = '';
+    let fileSize = 0;
+    const fields: Record<string, string> = {};
+    const uploadPromises: Promise<void>[] = [];
 
-    const job = await addFileJob({
-      originalName,
-      userId,
-      encryptedFileBuffer,
-      encryptedKeyBase64: encryptedKeyBuffer.toString('base64'),
-      ivBase64: ivBuffer.toString('base64'),
-      size: encryptedFileBuffer.length,
-      contentType: 'application/octet-stream'
+    bb.on('file', (name, file, info) => {
+      if (name === 'encryptedFile') {
+        const timestamp = Date.now();
+        const destination = `uploads/${timestamp}_${info.filename}`;
+        const gcsFile = bucket.file(destination);
+        
+        const writeStream = gcsFile.createWriteStream({
+          resumable: true,
+          contentType: 'application/octet-stream'
+        });
+
+        const uploadPromise = new Promise<void>((resolve, reject) => {
+          writeStream.on('error', (err) => {
+            logger.error('GCS write stream error', err);
+            reject(err);
+          });
+          writeStream.on('finish', () => {
+            storagePath = `gs://${bucket.name}/${destination}`;
+            resolve();
+          });
+        });
+
+        uploadPromises.push(uploadPromise);
+        file.pipe(writeStream);
+
+        file.on('data', (chunk) => {
+          fileSize += chunk.length;
+        });
+      } else {
+        file.resume();
+      }
     });
 
-    res.json({
-      status: 'success',
-      message: 'File upload queued for background processing',
-      jobId: job.id
+    bb.on('field', (name, val) => {
+      fields[name] = val;
     });
 
+    bb.on('finish', async () => {
+      try {
+        await Promise.all(uploadPromises);
+
+        if (!storagePath) {
+          return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const job = await addFileJob({
+          originalName: fields['originalName'] || 'unnamed',
+          userId,
+          storagePath,
+          encryptedKeyBase64: fields['encryptedKey'],
+          ivBase64: fields['iv'],
+          size: fileSize,
+          contentType: 'application/octet-stream'
+        });
+
+        res.json({
+          status: 'success',
+          message: 'File upload streamed and queued',
+          jobId: job.id
+        });
+      } catch (error) {
+        logger.error("Streaming upload failed during finish", error);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Upload failed' });
+        }
+      }
+    });
+
+    bb.on('error', (err) => {
+      logger.error('Busboy error', err);
+      if (!res.headersSent) {
+        res.status(400).json({ error: 'Upload parsing error' });
+      }
+    });
+
+    req.pipe(bb);
   } catch (error) {
     logger.error("Upload process failed", {
       error,
-      userId: req.user?.uid
+      userId: (req as any).user?.uid
     });
-    res.status(500).json({ error: 'Processing failed' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Processing failed' });
+    }
   }
 };
 
