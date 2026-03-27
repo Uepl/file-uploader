@@ -37,18 +37,16 @@ const handleLogin = async () => {
 </script>
 
 <template>
-    <div class="flex items-center justify-center min-h-screen bg-gray-100">
+    <main class="flex items-center justify-center min-h-screen bg-gray-100">
         <div class="w-87.5 rounded-lg border border-gray-200 bg-white text-gray-950 shadow-sm">
-
             <div class="flex flex-col space-y-1.5 p-6">
-                <h3 class="text-2xl font-semibold leading-none tracking-tight">Login</h3>
+                <h1 class="text-2xl font-semibold leading-none tracking-tight">Login</h1>
                 <p class="text-sm text-gray-500">Enter your credentials to access your files.</p>
             </div>
 
             <div class="p-6 pt-0">
                 <form @submit.prevent="handleLogin">
                     <div class="grid w-full items-center gap-4">
-
                         <div class="flex flex-col space-y-1.5">
                             <label for="email"
                                 class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
@@ -69,10 +67,9 @@ const handleLogin = async () => {
 
                         <div v-if="errorMsg"
                             class="relative w-full rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600 [&>svg]:text-red-600">
-                            <h5 class="mb-1 font-medium leading-none tracking-tight">Error</h5>
+                            <h2 class="mb-1 font-medium leading-none tracking-tight">Error</h2>
                             <div class="text-sm opacity-90">{{ errorMsg }}</div>
                         </div>
-
                     </div>
                 </form>
             </div>
@@ -85,5 +82,6 @@ const handleLogin = async () => {
                 </button>
             </div>
         </div>
-    </div>
+    </main>
+
 </template>

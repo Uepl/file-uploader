@@ -9,15 +9,15 @@ const activeTab = ref<'upload' | 'files'>('upload');
 <template>
     <div class="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
         <!-- Header -->
-        <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
             <div class="max-w-6xl mx-auto px-6 py-4">
                 <h1 class="text-2xl font-bold text-gray-900">Secure File Vault</h1>
                 <p class="text-gray-600 text-sm">End-to-End Encrypted Storage</p>
             </div>
-        </div>
+        </header>
 
         <!-- Tab Navigation -->
-        <div class="bg-white border-b border-gray-200">
+        <nav class="bg-white border-b border-gray-200">
             <div class="max-w-6xl mx-auto px-6">
                 <div class="flex gap-8">
                     <button @click="activeTab = 'upload'" :class="[
@@ -38,14 +38,15 @@ const activeTab = ref<'upload' | 'files'>('upload');
                     </button>
                 </div>
             </div>
-        </div>
+        </nav>
 
         <!-- Content -->
-        <div class="py-8">
+        <main class="py-8">
             <FileUploader v-if="activeTab === 'upload'" />
             <FileManager v-if="activeTab === 'files'" />
-        </div>
+        </main>
     </div>
+
 </template>
 
 <style scoped>
