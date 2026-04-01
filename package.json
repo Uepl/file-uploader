@@ -15,7 +15,8 @@
     "build:server": "tsc -p server/tsconfig.server.json",
     "start": "node dist/server/server.js",
     "lint": "eslint server/src --ext .ts",
-    "lint:fix": "eslint server/src --ext .ts --fix"
+    "lint:fix": "eslint server/src --ext .ts --fix",
+    "test:load": "k6 run tests/k6/load-test.js"
   },
   "author": "",
   "license": "ISC",
