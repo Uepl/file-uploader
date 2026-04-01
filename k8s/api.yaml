@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uploader-api
+  namespace: file-uploader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uploader-api
+  template:
+    metadata:
+      labels:
+        app: uploader-api
+    spec:
+      containers:
+      - name: uploader-api
+        image: kind-registry:5000/uploader-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          value: "3000"
+        - name: REDIS_HOST
+          value: "redis" # Matches the redis service name
+        - name: REDIS_PORT
+          value: "6379"
+        - name: GCS_BUCKET_NAME
+          valueFrom:
+            secretKeyRef:
+              name: uploader-secrets
+              key: GCS_BUCKET_NAME
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: uploader-secrets
+              key: JWT_SECRET
+        - name: DUCKDNS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: uploader-secrets
+              key: DUCKDNS_TOKEN
+        - name: FIREBASE_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: uploader-secrets
+              key: FIREBASE_PROJECT_ID
+        - name: FIREBASE_CLIENT_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: uploader-secrets
+              key: FIREBASE_CLIENT_EMAIL
+        - name: PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: uploader-secrets
+              key: PRIVATE_KEY
+        - name: FIREBASE_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: uploader-secrets
+              key: FIREBASE_PRIVATE_KEY
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: uploader-api
+  namespace: file-uploader
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: uploader-api
