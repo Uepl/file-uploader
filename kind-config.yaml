@@ -2,6 +2,7 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
+  image: kindest/node:v1.35.0
   kubeadmConfigPatches:
   - |
     kind: InitConfiguration
@@ -17,9 +18,10 @@ nodes:
     protocol: TCP
 containerdConfigPatches:
 - |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
-    endpoint = ["http://kind-registry:5000"]
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."kind-registry:5000"]
-    endpoint = ["http://kind-registry:5000"]
+  [plugins."io.containerd.grpc.v1.cri".registry]
+    config_path = "/etc/containerd/certs.d"
   [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
     SystemdCgroup = true
+networking:
+  ipFamily: ipv4
+  kubeProxyMode: "iptables"
