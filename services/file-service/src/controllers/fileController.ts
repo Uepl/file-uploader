@@ -31,37 +31,80 @@ export const uploadFile = async (req: Request, res: Response) => {
 
     let storagePath = '';
     let fileSize = 0;
+    let gcsFileRef: any = null;
     const fields: Record<string, string> = {};
     const uploadPromises: Promise<void>[] = [];
 
     bb.on('file', (name, file, info) => {
       if (name === 'encryptedFile') {
-        const timestamp = Date.now();
-        const destination = `uploads/${timestamp}_${info.filename}`;
+        const destination = `uploads/${Date.now()}_${info.filename}`;
         const gcsFile = bucket.file(destination);
+        gcsFileRef = gcsFile; // Keep track of this
 
         const writeStream = gcsFile.createWriteStream({
           resumable: true,
           contentType: 'application/octet-stream'
         });
 
+        // Track size as it streams
+        file.on('data', (chunk) => { fileSize += chunk.length; });
+
+        // Use a promise to track completion
         const uploadPromise = new Promise<void>((resolve, reject) => {
-          writeStream.on('error', (err) => {
-            logger.error('GCS write stream error', err);
-            reject(err);
-          });
+          let settled = false;
+
+          const cleanup = () => {
+            writeStream.removeAllListeners();
+            file.removeAllListeners();
+          };
+
+          const settle = (fn: () => void) => {
+            if (!settled) {
+              settled = true;
+              cleanup();
+              fn();
+            }
+          };
+
+          // Handle successful completion
           writeStream.on('finish', () => {
             storagePath = `gs://${bucket.name}/${destination}`;
-            resolve();
+            settle(() => resolve());
+          });
+
+          // writeStream 'close' without 'finish' = error/destroy (don't resolve)
+          writeStream.on('close', () => {
+            if (!settled && !storagePath) {
+              settle(() => reject(new Error('Write stream closed unexpectedly')));
+            }
+          });
+
+          // GCS/stream errors
+          writeStream.on('error', (err) => {
+            settle(() => reject(err));
+          });
+
+          // User-side errors/disconnect
+          file.on('error', (err) => {
+            settle(() => {
+              writeStream.destroy();
+              reject(err);
+            });
+          });
+
+          file.on('close', () => {
+            // If file closes but writeStream isn't finished, user disconnected mid-upload
+            if (!settled && !writeStream.writableFinished) {
+              settle(() => {
+                writeStream.destroy();
+                reject(new Error('User disconnected mid-upload'));
+              });
+            }
           });
         });
 
         uploadPromises.push(uploadPromise);
         file.pipe(writeStream);
-
-        file.on('data', (chunk) => {
-          fileSize += chunk.length;
-        });
       } else {
         file.resume();
       }
@@ -79,29 +122,31 @@ export const uploadFile = async (req: Request, res: Response) => {
           return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const job = await addFileJob({
-          originalName: fields['originalName'] || 'unnamed',
-          userId,
-          storagePath,
-          encryptedKeyBase64: fields['encryptedKey'],
-          ivBase64: fields['iv'],
-          size: fileSize,
-          contentType: 'application/octet-stream'
-        });
+        // CRITICAL: If this fails, we have a zombie file in GCS
+        try {
+          const job = await addFileJob({
+            originalName: fields['originalName'] || 'unnamed',
+            userId,
+            storagePath,
+            encryptedKeyBase64: fields['encryptedKey'],
+            ivBase64: fields['iv'],
+            size: fileSize,
+            contentType: 'application/octet-stream'
+          });
 
-        res.json({
-          status: 'success',
-          message: 'File upload streamed and queued',
-          jobId: job.id
-        });
-      } catch (error: any) {
-        logger.error("Streaming upload failed during finish", { error: error.message });
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Upload failed' });
+          res.json({ status: 'success', jobId: job.id });
+        } catch (jobError) {
+          // Cleanup: Delete the file from GCS if the DB/Queue job fails
+          if (gcsFileRef) await gcsFileRef.delete().catch((e: Error) => logger.error("Cleanup failed", e.message));
+          throw jobError;
         }
+      } catch (error: any) {
+        logger.error("Upload process failed", { error: error.message });
+        if (!res.headersSent) res.status(500).json({ error: 'Upload failed' });
       }
     });
 
+    // check parsing
     bb.on('error', (err) => {
       logger.error('Busboy error', err);
       if (!res.headersSent) {
