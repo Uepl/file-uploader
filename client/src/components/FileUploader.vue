@@ -2,9 +2,9 @@
 import { ref } from 'vue';
 // FIX 1: Added RefreshCw to imports
 import { UploadCloud, FileLock, Loader2, CheckCircle2, XCircle, ShieldCheck, RefreshCw } from 'lucide-vue-next';
-import { KeyUtils } from '../utils/KeyUtils';
-import { CryptoService } from '../services/CryptoService';
-import { FileService } from '../services/FileService';
+import { KeyUtils } from '../utils/KeyUtils.js';
+import { CryptoService } from '../services/CryptoService.js';
+import { FileService } from '../services/FileService.js';
 
 // --- State ---
 const fileInput = ref<HTMLInputElement | null>(null);

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { Download, Trash2, Edit2, Loader2, AlertCircle, CheckCircle2, Lock } from 'lucide-vue-next';
-import { FileService, type FileMetadata } from '../services/FileService';
+import { FileService, type FileMetadata } from '../services/FileService.js';
 
 // --- State ---
 const files = ref<FileMetadata[]>([]);

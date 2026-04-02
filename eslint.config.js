@@ -7,7 +7,11 @@ export default [
     ignores: ["node_modules/**", "dist/**", "client/**", ".vscode/**"],
   },
   {
-    files: ["server/src/**/*.ts"],
+    files: [
+      "server/src/**/*.ts",
+      "services/**/src/**/*.ts",
+      "packages/shared/src/**/*.ts",
+    ],
     languageOptions: {
       parser: typescriptEslintParser,
       parserOptions: {

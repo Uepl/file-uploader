@@ -6,3 +6,8 @@ npm-debug.log
 dist
 log/*.log
 redis-data/
+
+*.tsbuildinfo
+
+.DS_Store
+Thumbs.db

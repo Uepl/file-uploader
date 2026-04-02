@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
-import { UserModel, logger } from '@uploader/shared';
+import { logger } from '@uploader/shared/logger';
+import { UserModel } from '@uploader/shared/models';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 

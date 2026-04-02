@@ -1,4 +1,4 @@
-import { CryptoService } from './CryptoService';
+import { CryptoService } from './CryptoService.js';
 
 export interface FileMetadata {
     id: string;

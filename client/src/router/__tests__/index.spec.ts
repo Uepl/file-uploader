@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import router from '../index';
+import router from '../index.js';
 
 // Mock the views to avoid loading them
 vi.mock('../../views/LoginView.vue', () => ({ default: { name: 'LoginView', template: '<div>Login</div>' } }));
