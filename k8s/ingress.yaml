@@ -28,7 +28,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: uploader-api
+            name: uploader-gateway
             port:
               number: 3000
       - path: /

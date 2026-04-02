@@ -1,0 +1,33 @@
+{
+  "name": "@uploader/shared",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./queue": "./src/queue/fileQueue.ts",
+    "./logger": "./src/logger.ts",
+    "./models": "./src/models/index.ts",
+    "./middleware": "./src/middleware/index.ts",
+    "./firebase": "./src/firebase.ts",
+    "./keys": "./src/keyManager.ts"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.19.0",
+    "firebase-admin": "^13.7.0",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "bullmq": "^5.71.1",
+    "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.2",
+    "rate-limiter-flexible": "^9.1.1",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.0",
+    "typescript": "^5.9.3"
+  }
+}

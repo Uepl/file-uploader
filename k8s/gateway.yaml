@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uploader-gateway
+  namespace: file-uploader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uploader-gateway
+  template:
+    metadata:
+      labels:
+        app: uploader-gateway
+    spec:
+      containers:
+      - name: uploader-gateway
+        image: kind-registry:5000/uploader-gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GATEWAY_PORT
+          value: "3000"
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-service:3001"
+        - name: FILE_SERVICE_URL
+          value: "http://file-service:3002"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: uploader-gateway
+  namespace: file-uploader
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: uploader-gateway

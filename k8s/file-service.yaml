@@ -1,29 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: uploader-api
+  name: file-service
   namespace: file-uploader
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: uploader-api
+      app: file-service
   template:
     metadata:
       labels:
-        app: uploader-api
+        app: file-service
     spec:
       containers:
-      - name: uploader-api
-        image: kind-registry:5000/uploader-api:latest
+      - name: file-service
+        image: kind-registry:5000/uploader-file:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 3000
+        - containerPort: 3002
         env:
-        - name: PORT
-          value: "3000"
+        - name: FILE_SERVICE_PORT
+          value: "3002"
         - name: REDIS_HOST
-          value: "redis" # Matches the redis service name
+          value: "redis"
         - name: REDIS_PORT
           value: "6379"
         - name: GCS_BUCKET_NAME
@@ -36,11 +36,6 @@ spec:
             secretKeyRef:
               name: uploader-secrets
               key: JWT_SECRET
-        - name: DUCKDNS_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: uploader-secrets
-              key: DUCKDNS_TOKEN
         - name: FIREBASE_PROJECT_ID
           valueFrom:
             secretKeyRef:
@@ -51,37 +46,25 @@ spec:
             secretKeyRef:
               name: uploader-secrets
               key: FIREBASE_CLIENT_EMAIL
-        - name: PRIVATE_KEY
-          valueFrom:
-            secretKeyRef:
-              name: uploader-secrets
-              key: PRIVATE_KEY
         - name: FIREBASE_PRIVATE_KEY
           valueFrom:
             secretKeyRef:
               name: uploader-secrets
               key: FIREBASE_PRIVATE_KEY
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: uploader-secrets
+              key: PRIVATE_KEY
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: uploader-api
+  name: file-service
   namespace: file-uploader
 spec:
   ports:
-  - port: 3000
-    targetPort: 3000
+  - port: 3002
+    targetPort: 3002
   selector:
-    app: uploader-api
+    app: file-service

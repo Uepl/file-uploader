@@ -6,7 +6,10 @@ namespace: file-uploader
 resources:
 - namespace.yaml
 - redis.yaml
-- api.yaml
+- gateway.yaml
+- auth-service.yaml
+- file-service.yaml
+- worker.yaml
 - frontend.yaml
 - ingress.yaml
 - error-service.yaml

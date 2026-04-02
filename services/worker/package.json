@@ -1,0 +1,19 @@
+{
+  "name": "@uploader/worker",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@uploader/shared": "*",
+    "bullmq": "^5.71.1",
+    "ioredis": "^5.10.1",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
