@@ -20,6 +20,7 @@ RUN npm run build:client
 
 # --- STAGE 3: Base Runner ---
 FROM node:22-alpine AS runner-base
+RUN apk add --no-cache netcat-openbsd
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
