@@ -6,3 +6,4 @@ logs
 *.tsbuildinfo
 */**/*.tsbuildinfo
 *.node.tsbuildinfo
+packages/shared/tsconfig.tsbuildinfo
