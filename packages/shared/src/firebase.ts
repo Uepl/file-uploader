@@ -1,9 +1,10 @@
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import { Storage } from '@google-cloud/storage';
+import path from 'path';
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const formattedKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
