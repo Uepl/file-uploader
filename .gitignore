@@ -5,3 +5,4 @@ dist
 logs
 *.tsbuildinfo
 */**/*.tsbuildinfo
+*.node.tsbuildinfo
