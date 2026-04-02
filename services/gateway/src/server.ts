@@ -34,13 +34,10 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', createProxyMiddleware({
   target: AUTH_SERVICE_URL,
   changeOrigin: true,
-  pathRewrite: {
-    // No rewrite needed if auth-service handles /api/auth
-  },
   logger: logger
 }));
 
-app.use('/api', createProxyMiddleware({
+app.use('/api/files', createProxyMiddleware({
   target: FILE_SERVICE_URL,
   changeOrigin: true,
   logger: logger

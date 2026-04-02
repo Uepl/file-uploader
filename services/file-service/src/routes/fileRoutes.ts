@@ -16,9 +16,9 @@ router.get('/public-key', getPublicKeyHandler);
 router.post('/upload', uploadRateLimit, authenticateToken, uploadFile);
 
 // File management routes
-router.get('/files', authenticateToken, listFiles);
-router.get('/files/:fileId/download', authenticateToken, uploadRateLimit, downloadFile);
-router.delete('/files/:fileId', authenticateToken, deleteFile);
-router.patch('/files/:fileId', authenticateToken, renameFile);
+router.get('/', authenticateToken, listFiles);
+router.get('/:fileId/download', authenticateToken, uploadRateLimit, downloadFile);
+router.delete('/:fileId', authenticateToken, deleteFile);
+router.patch('/:fileId', authenticateToken, renameFile);
 
 export default router;

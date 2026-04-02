@@ -20,7 +20,7 @@ app.use(cors({
 app.use(express.json());
 
 // API Routes
-app.use('/api', fileRoutes);
+app.use('/', fileRoutes);
 
 const PORT = Number(process.env.FILE_SERVICE_PORT) || 3002;
 

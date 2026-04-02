@@ -20,7 +20,7 @@ app.use(cors({
 app.use(express.json());
 
 // API Routes
-app.use('/api/auth', authRoutes);
+app.use('/', authRoutes);
 
 const PORT = Number(process.env.AUTH_SERVICE_PORT) || 3001;
 
